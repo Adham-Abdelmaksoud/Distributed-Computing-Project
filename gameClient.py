@@ -1,6 +1,8 @@
 from socket import *
 import pygame
-from PIL import Image
+import pickle
+
+# VM: 20.199.99.151
 
 # connect to server
 clientSock = socket(AF_INET, SOCK_STREAM)
@@ -11,24 +13,44 @@ pygame.init()
 screenWidth = 1500
 screenHeight = 600
 
+# form the game display window
+gameDisplay = pygame.display.set_mode((screenWidth, screenHeight))
+pygame.display.set_caption('Racing Multiplayer Game')
+
 # load background images
 background = 'img/back_ground1.jpg'
 car = 'img/car.png'
-bgImg = Image.open(background)
-carImg = Image.open(car)
-gameBgImg = pygame.image.load(background)
-gameCarImg = pygame.image.load(car)
+bgImg = pygame.image.load(background)
+carImg = pygame.image.load(car)
 
 # background variables
 bg_y1 = 0
-bg_y2 = -600
+bg_y2 = -screenHeight
 bg_speed = 3
 
 # car variables
-car_offset_x = 0
-car_offset_y = 0
+location = [0,0]
 car_bottom_offset = 10
 car_speed = 1.5
+
+# shows the car for a given road
+def showCar(bg_x, location_x, location_y):
+    car_x = bg_x + bgImg.get_width()/2 - carImg.get_width()/2 + location_x
+    car_y = bgImg.get_height() - carImg.get_height() - car_bottom_offset + location_y
+    gameDisplay.blit(carImg, (car_x, car_y))
+
+# shows the road of a given player index
+def showMovingRoad(bg_y1, bg_y2, playersCnt, idx):
+    bg_x = (screenWidth/2) - playersCnt*(bgImg.get_width()/2) + idx*(bgImg.get_width())
+    gameDisplay.blit(bgImg, (bg_x, bg_y1))
+    bg_y1 += bg_speed
+    gameDisplay.blit(bgImg, (bg_x, bg_y2))
+    bg_y2 += bg_speed
+    if bg_y1 >= screenHeight:
+        bg_y1 = -bgImg.get_height()
+    if bg_y2 >= screenHeight:
+        bg_y2 = -bgImg.get_height()
+    return bg_x, bg_y1, bg_y2
 
 run = True
 while run:
@@ -44,40 +66,24 @@ while run:
     # if the user presses arrow keys
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
-        car_offset_x -= car_speed
+        location[0] -= car_speed
     if keys[pygame.K_RIGHT]:
-        car_offset_x += car_speed
-    
-    # send my car movement to the server
-    clientSock.send(f'{car_offset_x}/{car_offset_y}'.encode())
-    # receive the number of current players from the server
-    clientsCnt = int(clientSock.recv(4096).decode())
-    clientSock.send(b'ack')
-    # receive all cars' movement from the server
-    locationOffsets = clientSock.recv(4096).decode().split(',')
-    clientSock.send(b'ack')
+        location[0] += car_speed
 
-    # form the game display window
+    # send the current player location
+    clientSock.send(pickle.dumps(location))
+    # receive all players
+    players = pickle.loads(clientSock.recv(4096))
+
+    # make a new display
     gameDisplay = pygame.display.set_mode((screenWidth, screenHeight))
-    pygame.display.set_caption('Racing Multiplayer Game')
 
-    for i in range(clientsCnt):
+    for i in range(len(players)):
         # draw the background street for each player
-        bg_x = (screenWidth/2) - clientsCnt*(bgImg.size[0]/2) + i*(bgImg.size[0])
-        gameDisplay.blit(gameBgImg, (bg_x, bg_y1))
-        bg_y1 += bg_speed
-        gameDisplay.blit(gameBgImg, (bg_x, bg_y2))
-        bg_y2 += bg_speed
-        if bg_y1 >= screenHeight:
-            bg_y1 = -bgImg.size[1]
-        if bg_y2 >= screenHeight:
-            bg_y2 = -bgImg.size[1]
+        bg_x, bg_y1, bg_y2 = showMovingRoad(bg_y1, bg_y2, len(players), i)
 
         # draw each player car
-        offset_x, offset_y = list(map(float, locationOffsets[i].split('/')))
-        car_x = bg_x + bgImg.size[0]/2 - carImg.size[0]/2 + offset_x
-        car_y = bgImg.size[1] - carImg.size[1] - car_bottom_offset + offset_y
-        gameDisplay.blit(gameCarImg, (car_x, car_y))
+        showCar(bg_x, players[i].location[0], players[i].location[1])
         
     # redraw the scene
     pygame.display.update()
