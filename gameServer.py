@@ -1,7 +1,7 @@
 from socket import *
 import threading
 import pickle
-from player import Player
+from playerDB import *
 
 # bind to address and listen to connections
 address = ''
@@ -11,8 +11,15 @@ serverSock.bind((address, port))
 serverSock.listen()
 
 # initializations
+id = 0
 clientSocks = []
 players = []
+
+# thread for updating database
+def updateDB():
+    for player in players:
+        player.updateLocation()
+    threading.Timer(3, updateDB).start()
 
 # thread for each player
 def sendClientScene(clientSock, player):
@@ -32,17 +39,20 @@ def sendClientScene(clientSock, player):
     players.remove(player)
 
 
-while True:
-    # wait for a connection
-    print('listening to connections...')
-    clientSock, (address, port) = serverSock.accept()
-    print('connection established')
-    
-    # add client to lists
-    clientSocks.append(clientSock)
-    player = Player([0,0])
-    players.append(player)
+if __name__ == '__main__':
+    updateDB()
+    while True:
+        # wait for a connection
+        print('listening to connections...')
+        clientSock, (address, port) = serverSock.accept()
+        print('connection established')
+        
+        # add client to lists
+        clientSocks.append(clientSock)
+        player = Player(id, 'adham', [0,0])
+        id += 1
+        players.append(player)
 
-    # form a new thread for the client
-    thread = threading.Thread(target=sendClientScene, args=(clientSock, player,))
-    thread.start()
+        # form a new thread for the client
+        thread = threading.Thread(target=sendClientScene, args=(clientSock, player,))
+        thread.start()
