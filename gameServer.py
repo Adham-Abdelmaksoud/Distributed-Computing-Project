@@ -4,16 +4,26 @@ import pickle
 from playerDB import *
 
 # bind to address and listen to connections
-address = ''
-port = 20000
-serverSock = socket(AF_INET, SOCK_STREAM)
-serverSock.bind((address, port))
-serverSock.listen()
+IP = ''
+PORT = 20000
+serverSock_game = socket(AF_INET, SOCK_STREAM)
+serverSock_game.bind((IP, PORT))
+serverSock_game.listen()
+
+serverSock_chat = socket(AF_INET, SOCK_STREAM)
+serverSock_chat.bind((IP, PORT+20))
+serverSock_chat.listen()
 
 # initializations
-id = 0
-clientSocks = []
+clientSocks_game = []
+clientSocks_chat = []
 players = []
+id = 0
+
+# broadcast a message to all players
+def broadcast(message):
+    for clientSock in clientSocks_chat:
+        clientSock.send(message.encode())
 
 # thread for updating database
 def updateDB():
@@ -22,20 +32,24 @@ def updateDB():
     threading.Timer(3, updateDB).start()
 
 # thread for each player
-def sendClientScene(clientSock, player):
+def sendClientScene(clientSock_game, clientSock_chat, player):
     while True:
         try:
             # receive current player location
-            player.location = pickle.loads(clientSock.recv(4096))
+            player.location = pickle.loads(clientSock_game.recv(4096))
             # send all players
-            clientSock.send(pickle.dumps(players))
+            clientSock_game.send(pickle.dumps(players))
+
+            message = clientSock_chat.recv(4096).decode()
+            broadcast(message)
 
         except:
             break
-
     # remove client from lists if player exits game 
-    clientSock.close()
-    clientSocks.remove(clientSock)
+    clientSock_game.close()
+    clientSock_chat.close()
+    clientSocks_game.remove(clientSock_game)
+    clientSocks_chat.remove(clientSock_chat)
     players.remove(player)
 
 
@@ -44,15 +58,21 @@ if __name__ == '__main__':
     while True:
         # wait for a connection
         print('listening to connections...')
-        clientSock, (address, port) = serverSock.accept()
+        clientSock_game, (IP, PORT) = serverSock_game.accept()
+        clientSock_chat, (IP, PORT) = serverSock_chat.accept()
         print('connection established')
-        
+
+        # get the player nickname
+        nickname = clientSock_chat.recv(1024).decode()
+        print(f'{nickname} joined the game')
+
         # add client to lists
-        clientSocks.append(clientSock)
+        clientSocks_game.append(clientSock_game)
+        clientSocks_chat.append(clientSock_chat)
         player = Player(id, 'adham', [0,0])
         id += 1
         players.append(player)
 
         # form a new thread for the client
-        thread = threading.Thread(target=sendClientScene, args=(clientSock, player,))
-        thread.start()
+        playerThread = threading.Thread(target=sendClientScene, args=(clientSock_game, clientSock_chat, player,))
+        playerThread.start()
