@@ -6,6 +6,11 @@ import tkinter
 from tkinter import simpledialog
 import tkinter.scrolledtext
 import queue
+import random
+from time import sleep
+
+clock=pygame.time.Clock()
+
 
 # VM: 20.199.99.151
 # serverIP = '20.199.99.151'
@@ -28,24 +33,43 @@ print(nickname)
 
 # initialize pygame
 pygame.init()
-screenWidth = 1500
+screenWidth = 800
 screenHeight = 600
 
 # load background images
 background = 'img/back_ground1.jpg'
 car = 'img/car.png'
+enemy='img/enemy_car_1.png' 
+
 bgImg = pygame.image.load(background)
 carImg = pygame.image.load(car)
+enemyImg=pygame.image.load(enemy)
 
 # background variables
 bg_y1 = 0
 bg_y2 = -screenHeight
 bg_speed = 3
 
+
+
+#enemy car variables
+enemy_car_startx = random.randrange(310, 450)
+enemy_car_starty1 = 0
+enemy_car_starty2 = -screenHeight
+enemy_car_speed = 1
+enemy_car_width = 49
+enemy_car_height = 10
+
+
 # car variables
 location = [0,0]
 car_bottom_offset = 10
 car_speed = 1.5
+
+#counting score
+count=0
+white = (255, 255, 255)
+black = (0, 0, 0)
 
 # shows the car for a given road
 def showCar(bg_x, location_x, location_y):
@@ -57,18 +81,60 @@ def showCar(bg_x, location_x, location_y):
         car_x = bg_x + bgImg.get_width() - carImg.get_width() - 15
     gameDisplay.blit(carImg, (car_x, car_y))
 
+'''
+#shows the enemy car
+def showEnemyCar(enemy_car_startx, enemy_car_starty):
+    if enemy_car_starty > screenHeight:
+        enemy_car_starty = 0 - enemy_car_height
+        enemy_car_startx = random.randrange(310, 450)
+    gameDisplay.blit(enemyImg, (enemy_car_startx, enemy_car_starty))
+    enemy_car_starty += enemy_car_speed
+    gameDisplay.blit(enemyImg, (enemy_car_startx, enemy_car_starty))
+'''
+
+
+#shows the enemy car
+def showEnemyCar(bg_x,enemy_car_startx,enemy_car_starty1,enemy_car_starty2):
+    
+    gameDisplay.blit(enemyImg, (enemy_car_startx, enemy_car_starty1))
+    enemy_car_starty1 += enemy_car_speed
+    gameDisplay.blit(enemyImg, (enemy_car_startx, enemy_car_starty2))
+    enemy_car_starty2 += enemy_car_speed
+    
+    random_location_x = random.randrange(-100, 100)
+
+    if enemy_car_starty1 >= screenHeight:
+        enemy_car_starty1 = -bgImg.get_height()
+        enemy_car_startx = bg_x + bgImg.get_width()/2 - enemyImg.get_width()/2 + random_location_x
+    if enemy_car_starty2 >= screenHeight:
+        enemy_car_starty2 = -bgImg.get_height()
+        enemy_car_startx = bg_x + bgImg.get_width()/2 - enemyImg.get_width()/2 + random_location_x
+    return enemy_car_startx, enemy_car_starty1,enemy_car_starty2
+    
+
+
 # shows the road of a given player index
 def showMovingRoad(bg_y1, bg_y2, playersCnt, idx):
     bg_x = (screenWidth/2) - playersCnt*(bgImg.get_width()/2) + idx*(bgImg.get_width())
     gameDisplay.blit(bgImg, (bg_x, bg_y1))
-    bg_y1 += bg_speed
+    bg_y1 += enemy_car_speed
     gameDisplay.blit(bgImg, (bg_x, bg_y2))
-    bg_y2 += bg_speed
+    bg_y2 += enemy_car_speed
     if bg_y1 >= screenHeight:
         bg_y1 = -bgImg.get_height()
     if bg_y2 >= screenHeight:
         bg_y2 = -bgImg.get_height()
     return bg_x, bg_y1, bg_y2
+
+
+def display_message(msg):
+    font = pygame.font.SysFont("comicsansms", 72, True)
+    text = font.render(msg, True, (255, 255, 255))
+    gameDisplay.blit(text, (400 - text.get_width() // 2, 240 - text.get_height() // 2))
+    #display_credit()
+    pygame.display.update()
+    clock.tick(60)
+    sleep(1)
 
 
 def updateTextArea(text_area, message):
@@ -78,6 +144,23 @@ def updateTextArea(text_area, message):
         text_area.insert('end',message)
         text_area.yview('end')
         text_area.config(state='disabled')
+
+'''
+def highscore(count):
+        if count%1000==0:
+            font1 = pygame.font.SysFont("arial", 20)
+            text1 = font1.render("Score : " + str(count-1000), True, black)
+            gameDisplay.blit(text1, (0, 0))
+            font2 = pygame.font.SysFont("arial", 20)
+            text2 = font2.render("Score : " + str(count), True, white)
+            gameDisplay.blit(text2, (0, 0))
+        return count
+'''
+def highscore(count):
+    font2 = pygame.font.SysFont("arial", 20)
+    text2 = font2.render("Score : " + str(int(count/100)*100), True, white)
+    gameDisplay.blit(text2, (0, 0))
+    return count
 
 
 messageQueue = queue.Queue()
@@ -131,6 +214,7 @@ pygame.display.set_caption('Racing Multiplayer Game')
 
 # game
 run = True
+crash=False
 while run:
     # if the user exits the game
     for event in pygame.event.get():
@@ -152,11 +236,14 @@ while run:
         location[0] += car_speed
 
 
+
     # send the current player location
     clientSock_game.send(pickle.dumps(location))
+
     # receive all players
     players = pickle.loads(clientSock_game.recv(4096))
 
+    
 
     # get chat message
     if not messageQueue.empty():
@@ -174,12 +261,23 @@ while run:
         updateTextArea(text_area, broadcastMessage)
 
 
+    gameDisplay.fill(list(black))
+
     for i in range(len(players)):
         # draw the background street for each player
         bg_x, bg_y1, bg_y2 = showMovingRoad(bg_y1, bg_y2, len(players), i)
 
         # draw each player car
         showCar(bg_x, players[i].location[0], players[i].location[1])
+
+        #draw enemy car
+        enemy_car_startx,enemy_car_starty1,enemy_car_starty2=showEnemyCar(bg_x,enemy_car_startx,enemy_car_starty1, enemy_car_starty2)
+        
+
+    #Displaying score
+    count=highscore(count)
+    count +=1
+        
         
     # redraw the scene
     pygame.display.update()
