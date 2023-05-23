@@ -27,44 +27,55 @@ database1 = firebase1.database()
 database2 = firebase2.database()
 
 
-# def getAllPlayersData():
-#     players = database1.child('Players').get()
-#     return dict(players.val())
+def getAllPlayersData():
+    players = database1.child('Players').get()
+    return dict(players.val())
 
-# def getPlayersCount():
-#     return len(database1.child('Players').get().val())
+def getPlayersCount():
+    return len(database1.child('Players').get().val())
 
-# def deleteAllPLayers():
-#     database1.child('Players').remove()
+def deleteAllPLayers():
+    database1.child('Players').remove()
+
+def isPlayerInDB(name):
+    players = getAllPlayersData()
+    if name in players.keys():
+        return True
+    return False
 
 
 class Player():
     def __init__(self, name, location,score):
-
-        self.name = name
-        self.location = location
-        self.score=score
-      
-        try:
-            database1.child('Players').child(self.name).set({
-                'name': self.name,
-                'location': self.location,
-                'score':self.score
-            })
-            database2.child('Players').child(self.name).set({
-                'name': self.name,
-                'location': self.location,
-                'score':self.score
-            })
-        except:
+        if isPlayerInDB(name):
+            self.name = name
+            playerData = self.getPlayerData()
+            self.location = playerData['location']
+            self.score = playerData['score']
+        
+        else:
+            self.name = name
+            self.location = location
+            self.score = score
             try:
+                database1.child('Players').child(self.name).set({
+                    'name': self.name,
+                    'location': self.location,
+                    'score':self.score
+                })
                 database2.child('Players').child(self.name).set({
                     'name': self.name,
                     'location': self.location,
                     'score':self.score
                 })
             except:
-                pass
+                try:
+                    database2.child('Players').child(self.name).set({
+                        'name': self.name,
+                        'location': self.location,
+                        'score':self.score
+                    })
+                except:
+                    pass
 
     def getPlayerData(self):
         try:
