@@ -188,6 +188,7 @@ guiThread.start()
 
 # Game and Chat main thread
 run = True
+crash = False
 iteration=False
 while run:
     
@@ -209,9 +210,10 @@ while run:
         location[0] -= car_speed
     if keys[pygame.K_RIGHT]:
         location[0] += car_speed
-
+    recievables = [location,int(count/100)*100]
+    
     # send the current player location
-    clientSock_game.send(pickle.dumps(location))
+    clientSock_game.send(pickle.dumps(recievables))
     # receive all players
     players = pickle.loads(clientSock_game.recv(4096))
     
@@ -254,10 +256,13 @@ while run:
         # detect collisions for current client only
     if detectCollision(my_car_x, my_car_y, my_enemy_x, my_enemy_y):
         display_message("Game Over")
+        count=0
+        crash = True
 
     #Displaying score
-    count = highscore(count)
-    count += 1
+    if not crash:
+        count = highscore(count)
+        count += 1
         
     # redraw the scene
     pygame.display.update()
