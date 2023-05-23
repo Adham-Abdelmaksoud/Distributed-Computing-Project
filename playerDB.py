@@ -28,16 +28,34 @@ database2 = firebase2.database()
 
 
 def getAllPlayersData():
-    players = database1.child('Players').get()
+    try:
+        players = database1.child('Players').get()
+    except:
+        players = database2.child('Players').get()
     return dict(players.val())
 
-def getPlayersCount():
-    return len(database1.child('Players').get().val())
+def isDBEmpty():
+    try:
+        players = database1.child('Players').shallow().get().val()
+    except:
+        players = database2.child('Players').shallow().get().val()
+    if players == None:
+        return True
+    return False
 
 def deleteAllPLayers():
-    database1.child('Players').remove()
+    try:
+        database1.child('Players').remove()
+        database2.child('Players').remove()
+    except:
+        try:
+            database2.child('Players').remove()
+        except:
+            pass
 
 def isPlayerInDB(name):
+    if isDBEmpty():
+        return False
     players = getAllPlayersData()
     if name in players.keys():
         return True
