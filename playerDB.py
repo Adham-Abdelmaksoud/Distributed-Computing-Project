@@ -1,3 +1,4 @@
+
 import pyrebase
 
 config1 = {
@@ -38,57 +39,80 @@ database2 = firebase2.database()
 
 
 class Player():
-    def __init__(self, id, name, location):
-        self.id = id
+    def __init__(self, name, location,score):
+
         self.name = name
         self.location = location
+        self.score=score
+      
         try:
-            database1.child('Players').child(self.id).set({
+            database1.child('Players').child(self.name).set({
                 'name': self.name,
-                'location': self.location
+                'location': self.location,
+                'score':self.score
             })
-            database2.child('Players').child(self.id).set({
+            database2.child('Players').child(self.name).set({
                 'name': self.name,
-                'location': self.location
+                'location': self.location,
+                'score':self.score
             })
         except:
             try:
-                database2.child('Players').child(self.id).set({
+                database2.child('Players').child(self.name).set({
                     'name': self.name,
-                    'location': self.location
+                    'location': self.location,
+                    'score':self.score
                 })
             except:
                 pass
 
     def getPlayerData(self):
         try:
-            player = database1.child('Players').child(self.id).get()
+            player = database1.child('Players').child(self.name).get()
         except:
-            player = database2.child('Players').child(self.id).get()
+            player = database2.child('Players').child(self.name).get()
         return dict(player.val())
-    
+
     def deletePlayer(self):
         try:
-            database1.child('Players').child(self.id).remove()
-            database2.child('Players').child(self.id).remove()
+            database1.child('Players').child(self.name).remove()
+            database2.child('Players').child(self.name).remove()
         except:
             try:
-                database2.child('Players').child(self.id).remove()
+                database2.child('Players').child(self.name).remove()
             except:
                 pass
 
     def updateLocation(self):
         try:
-            database1.child('Players').child(self.id).update({
+            database1.child('Players').child(self.name).update({
                 'location': self.location,
             })
-            database2.child('Players').child(self.id).update({
+            database2.child('Players').child(self.name).update({
                 'location': self.location,
             })
         except:
             try:
-                database2.child('Players').child(self.id).update({
+                database2.child('Players').child(self.name).update({
                     'location': self.location,
                 })
             except:
                 pass
+
+    def updateScore(self):
+        try:
+            database1.child('Players').child(self.name).update({
+                'score': self.score,
+            })
+            database2.child('Players').child(self.name).update({
+                'score': self.score,
+            })
+        except:
+            try:
+                database2.child('Players').child(self.name).update({
+                    'score': self.score,
+                })
+            except:
+                pass
+
+
