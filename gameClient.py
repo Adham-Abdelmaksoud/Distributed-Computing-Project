@@ -171,7 +171,7 @@ def gui():
         input_area.delete('1.0','end')
 
     def stop():
-        win.destroy()
+        win.quit()
         clientSock_chat.close()
         exit(0)
 
