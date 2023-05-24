@@ -20,6 +20,7 @@ clientSocks_chat = []
 players = []
 
 
+
 # broadcast a message to all players
 def broadcast(message):
     for clientSock in clientSocks_chat:
@@ -43,7 +44,7 @@ def sendClientScene(clientSock_game, clientSock_chat, player):
             player.location = recievables[0]
             player.score = recievables[1]
             # send all players
-            clientSock_game.send(pickle.dumps(players))
+            clientSock_game.send(pickle.dumps(datasent))
 
             message = clientSock_chat.recv(4096).decode()
             broadcast(message)
@@ -78,6 +79,7 @@ if __name__ == '__main__':
 
         player = Player(nickname, [0,0],0)
         players.append(player)
+        datasent=[players,player.score]
 
         # form a new thread for the client
         playerThread = threading.Thread(target=sendClientScene, args=(clientSock_game, clientSock_chat, player,))
