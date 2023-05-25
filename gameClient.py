@@ -131,11 +131,21 @@ def updateTextArea(text_area, message):
         text_area.config(state='disabled')
 
 # view the score
-def highscore(count):
-    font2 = pygame.font.SysFont("arial", 20)
-    text2 = font2.render("Score : " + str(int(count/100)*100), True, white)
-    gameDisplay.blit(text2, (0, 0))
+def displayScore(count):
+    font = pygame.font.SysFont("comicsansms", 20)
+    text = font.render("Score : " + str(int(count/100)*100), True, white)
+    gameDisplay.blit(text, (0, 0))
     return count
+
+def displayLeadboard(leadboard, color):
+    y_coordinate=40
+    font = pygame.font.SysFont("comicsansms", 20)
+    text1 = font.render("Leadboard: ", True, white)
+    gameDisplay.blit(text1, (0, y_coordinate))
+    for name in leadboard:
+        y_coordinate+=25
+        text2 = font.render(str(name), True, color)
+        gameDisplay.blit(text2, (0, y_coordinate))
 
 def display_message(msg):
         font = pygame.font.SysFont("comicsansms", 72, True)
@@ -212,18 +222,25 @@ while run:
         location[0] += car_speed
     senderables = [location,int(count/100)*100]
     
+
     # send the current player location and score
     clientSock_game.send(pickle.dumps(senderables))
+
+    
 
     # receive all players locations
     receivables = pickle.loads(clientSock_game.recv(4096))
     players=receivables[0]
+    leadboard=receivables[2]
+    #print(leadboard)
 
     # if first iteration, receive client's last attempt -score- 
     if not iteration:
         count=receivables[1]
         my_idx=len(players)-1
         iteration=True
+    else:
+        displayLeadboard(leadboard, black)
         
     # get chat message
     if not messageQueue.empty():
@@ -263,10 +280,10 @@ while run:
         count=0
         crash = True
         
-
     #Displaying score
     if not crash:
-        count = highscore(count)
+        displayLeadboard(leadboard, white)
+        count = displayScore(count)
         count += 1
         
     # redraw the scene

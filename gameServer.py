@@ -18,8 +18,18 @@ serverSock_chat.listen()
 clientSocks_game = []
 clientSocks_chat = []
 players = []
+global_leadboard = []
 
 
+
+def calculateHighScores(leadboard):
+    scores={}
+    for player in players:
+        scores[player.name]=player.score
+    print(scores)
+    leadboard = sorted(scores.items(), key = lambda x:x[1], reverse = True)
+    print(leadboard)
+    return leadboard
 
 # broadcast a message to all players
 def broadcast(message):
@@ -36,18 +46,24 @@ def updateDB():
         
 
 # thread for each player
-def sendClientScene(clientSock_game, clientSock_chat, player):
+def sendClientScene(clientSock_game, clientSock_chat, player, global_leadboard):
     while True:
         try:
+
+            #Generate Leadboard according to players scores
+            global_leadboard=calculateHighScores(global_leadboard)
+            senderables=[players,player.score,global_leadboard]
+            
             # receive current player location
             recievables = pickle.loads(clientSock_game.recv(4096))
             player.location = recievables[0]
             player.score = recievables[1]
             # send all players
-            clientSock_game.send(pickle.dumps(datasent))
+            clientSock_game.send(pickle.dumps(senderables))
 
             message = clientSock_chat.recv(4096).decode()
             broadcast(message)
+            
 
         except:
             break
@@ -79,8 +95,7 @@ if __name__ == '__main__':
 
         player = Player(nickname, [0,0],0)
         players.append(player)
-        datasent=[players,player.score]
 
         # form a new thread for the client
-        playerThread = threading.Thread(target=sendClientScene, args=(clientSock_game, clientSock_chat, player,))
+        playerThread = threading.Thread(target=sendClientScene, args=(clientSock_game, clientSock_chat, player,global_leadboard,))
         playerThread.start()
