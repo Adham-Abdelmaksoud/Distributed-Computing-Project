@@ -10,7 +10,6 @@ import random
 from time import sleep
 
 
-# VM: 20.199.99.151
 # serverIP = '20.199.99.151'
 serverIP = '127.0.0.1'
 serverPort = 20000
@@ -53,16 +52,13 @@ limit2 = bgImg.get_width()-carImg.get_width()-15
 
 # player car variables
 location = [0,0]
-car_bottom_offset = 10
+car_bottom_offset = 20
 car_speed = 1
 
-#enemy car variables
+# enemy car variables
 random_x = 0
 enemy_y = screenHeight
-enemy_car_starty2 = -screenHeight
 enemy_car_speed = 1
-enemy_car_width = 49
-enemy_car_height = 10
 
 # score variables
 count = 0
@@ -74,7 +70,7 @@ messageQueue = queue.Queue()
 textAreaQueue = queue.Queue()
 
 # shows the car for a given road
-def showCar(bg_x, location_x, location_y):
+def showCar(bg_x, location_x, location_y, name):
     car_x = bg_x + bgImg.get_width()/2 - carImg.get_width()/2 + location_x
     car_y = bgImg.get_height() - carImg.get_height() - car_bottom_offset + location_y
     if car_x < bg_x + limit1:
@@ -82,6 +78,14 @@ def showCar(bg_x, location_x, location_y):
     if car_x > bg_x + limit2:
         car_x = bg_x + limit2
     gameDisplay.blit(carImg, (car_x, car_y))
+
+    font3 = pygame.font.SysFont("arial", 17)
+    text3 = font3.render(name, True, white)
+    name_x = car_x + carImg.get_width()/2
+    name_y = car_y + carImg.get_height() + 10
+    text_rect = text3.get_rect(center=(name_x, name_y))
+    gameDisplay.blit(text3, text_rect)
+
     return car_x, car_y
 
 #shows the enemy car
@@ -107,6 +111,7 @@ def showMovingRoad(bg_y1, bg_y2, playersCnt, idx):
         bg_y2 = -bgImg.get_height()
     return bg_x, bg_y1, bg_y2
 
+# function to detect collision between player and enemy
 def detectCollision(car_x, car_y, enemy_x, enemy_y):
     if car_x > enemy_x and car_x < enemy_x+enemyImg.get_width():
         if car_y > enemy_y and car_y < enemy_y+enemyImg.get_height():
@@ -262,11 +267,11 @@ while run:
     for i in range(len(players)):
         # draw the background street for each player
         bg_x, bg_y1, bg_y2 = showMovingRoad(bg_y1, bg_y2, len(players), i)
-        # draw each player car
-        car_x, car_y = showCar(bg_x, players[i].location[0], players[i].location[1])
         # draw enemy car
         random_x, enemy_y = showEnemyCar(bg_x, random_x, enemy_y)
         enemy_x = bg_x + random_x
+        # draw each player car
+        car_x, car_y = showCar(bg_x, players[i].location[0], players[i].location[1], players[i].name)
 
         # Saving the values of the current client
         if name == players[i].name:

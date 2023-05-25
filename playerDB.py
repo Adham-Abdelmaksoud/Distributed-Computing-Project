@@ -63,7 +63,7 @@ def isPlayerInDB(name):
 
 
 class Player():
-    def __init__(self, name, location,score):
+    def __init__(self, name, location, score):
         if isPlayerInDB(name):
             self.name = name
             playerData = self.getPlayerData()

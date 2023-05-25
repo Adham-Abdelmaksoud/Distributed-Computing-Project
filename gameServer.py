@@ -61,7 +61,9 @@ def sendClientScene(clientSock_game, clientSock_chat, player, global_leadboard):
             # send all players
             clientSock_game.send(pickle.dumps(senderables))
 
+            # receive a message from the player
             message = clientSock_chat.recv(4096).decode()
+            # broadcast the message to all players
             broadcast(message)
             
 
@@ -93,7 +95,8 @@ if __name__ == '__main__':
         clientSocks_game.append(clientSock_game)
         clientSocks_chat.append(clientSock_chat)
 
-        player = Player(nickname, [0,0],0)
+        # create the player
+        player = Player(nickname, [0,0], 0)
         players.append(player)
 
         # form a new thread for the client
