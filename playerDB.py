@@ -63,17 +63,19 @@ def isPlayerInDB(name):
 
 
 class Player():
-    def __init__(self, name, location, score):
+    def __init__(self, name, location, score, enemyLocation):
         if isPlayerInDB(name):
             self.name = name
             playerData = self.getPlayerData()
             self.location = playerData['location']
             self.score = playerData['score']
+            self.enemyLocation = enemyLocation
         
         else:
             self.name = name
             self.location = location
             self.score = score
+            self.enemyLocation = enemyLocation
             try:
                 database1.child('Players').child(self.name).set({
                     'name': self.name,
@@ -115,15 +117,15 @@ class Player():
     def updateLocation(self):
         try:
             database1.child('Players').child(self.name).update({
-                'location': self.location,
+                'location': self.location
             })
             database2.child('Players').child(self.name).update({
-                'location': self.location,
+                'location': self.location
             })
         except:
             try:
                 database2.child('Players').child(self.name).update({
-                    'location': self.location,
+                    'location': self.location
                 })
             except:
                 pass
@@ -131,15 +133,15 @@ class Player():
     def updateScore(self):
         try:
             database1.child('Players').child(self.name).update({
-                'score': self.score,
+                'score': self.score
             })
             database2.child('Players').child(self.name).update({
-                'score': self.score,
+                'score': self.score
             })
         except:
             try:
                 database2.child('Players').child(self.name).update({
-                    'score': self.score,
+                    'score': self.score
                 })
             except:
                 pass

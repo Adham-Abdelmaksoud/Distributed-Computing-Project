@@ -55,9 +55,10 @@ def sendClientScene(clientSock_game, clientSock_chat, player, global_leadboard):
             senderables=[players,player.score,global_leadboard]
             
             # receive current player location
-            recievables = pickle.loads(clientSock_game.recv(4096))
-            player.location = recievables[0]
-            player.score = recievables[1]
+            receivables = pickle.loads(clientSock_game.recv(4096))
+            player.location = receivables[0]
+            player.score = receivables[1]
+            player.enemyLocation = receivables[2]
             # send all players
             clientSock_game.send(pickle.dumps(senderables))
 
@@ -96,8 +97,14 @@ if __name__ == '__main__':
         clientSocks_chat.append(clientSock_chat)
 
         # create the player
-        player = Player(nickname, [0,0], 0)
+        player = Player(
+            nickname,       # player name
+            [0,0],          # player relative location
+            0,              # player score
+            [0,3000]        # enemy relative location
+        )
         players.append(player)
+        clientSock_game.send(pickle.dumps(player))
 
         # form a new thread for the client
         playerThread = threading.Thread(target=sendClientScene, args=(clientSock_game, clientSock_chat, player,global_leadboard,))

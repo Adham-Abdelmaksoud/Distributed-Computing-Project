@@ -26,7 +26,9 @@ msg = tkinter.Tk()
 msg.withdraw()
 nickname = simpledialog.askstring("Nickname", "Please choose a nickname", parent=msg)
 clientSock_chat.send(nickname.encode())
-print(nickname)
+
+# get the player data
+my_player = pickle.loads(clientSock_game.recv(4096))
 
 # initialize pygame and form window
 pygame.init()
@@ -51,17 +53,16 @@ limit1 = 15
 limit2 = bgImg.get_width()-carImg.get_width()-15
 
 # player car variables
-location = [0,0]
+location = my_player.location
 car_bottom_offset = 20
 car_speed = 1
 
 # enemy car variables
-random_x = 0
-enemy_y = screenHeight
+enemyLocation = my_player.enemyLocation
 enemy_car_speed = 1
 
 # score variables
-count = 0
+count = my_player.score
 white = (255, 255, 255)
 black = (0, 0, 0)
 
@@ -88,7 +89,7 @@ def showCar(bg_x, location_x, location_y, name):
 
     return car_x, car_y
 
-#shows the enemy car
+# shows the enemy car
 def showEnemyCar(bg_x, random_x, enemy_y):
     if enemy_y >= screenHeight:
         enemy_y = -bgImg.get_height()
@@ -225,11 +226,14 @@ while run:
         location[0] -= car_speed
     if keys[pygame.K_RIGHT]:
         location[0] += car_speed
-    senderables = [location,int(count/100)*100]
     
 
     # send the current player location and score
-    clientSock_game.send(pickle.dumps(senderables))
+    clientSock_game.send(pickle.dumps([
+        location,
+        int(count/100)*100,
+        enemyLocation
+    ]))
 
     
 
@@ -266,21 +270,27 @@ while run:
     gameDisplay.fill(list(black))
     for i in range(len(players)):
         # draw the background street for each player
-        bg_x, bg_y1, bg_y2 = showMovingRoad(bg_y1, bg_y2, len(players), i)
+        bg_x, bg_y1, bg_y2 = showMovingRoad(
+            bg_y1, bg_y2, len(players), i
+        )
         # draw enemy car
-        random_x, enemy_y = showEnemyCar(bg_x, random_x, enemy_y)
-        enemy_x = bg_x + random_x
+        enemyLocation = showEnemyCar(
+            bg_x, players[i].enemyLocation[0], players[i].enemyLocation[1]
+        )
+        absolute_enemy_x = bg_x + enemyLocation[0]
         # draw each player car
-        car_x, car_y = showCar(bg_x, players[i].location[0], players[i].location[1], players[i].name)
+        car_x, car_y = showCar(
+            bg_x, players[i].location[0], players[i].location[1], players[i].name
+        )
 
         # Saving the values of the current client
         if name == players[i].name:
-            my_enemy_x= enemy_x
-            my_enemy_y= enemy_y
+            my_enemy_x= absolute_enemy_x
+            my_enemy_y= enemyLocation[1]
             my_car_x=car_x
             my_car_y=car_y
 
-        # detect collisions for current client only
+    # detect collisions for current client only
     if detectCollision(my_car_x, my_car_y, my_enemy_x, my_enemy_y):
         display_message("Game Over")
         count=0
