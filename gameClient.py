@@ -238,6 +238,7 @@ while run:
     if not iteration:
         count=receivables[1]
         my_idx=len(players)-1
+        name= players[my_idx].name
         iteration=True
     else:
         displayLeadboard(leadboard, black)
@@ -268,7 +269,7 @@ while run:
         enemy_x = bg_x + random_x
 
         # Saving the values of the current client
-        if i == my_idx:
+        if name == players[i].name:
             my_enemy_x= enemy_x
             my_enemy_y= enemy_y
             my_car_x=car_x
