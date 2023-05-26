@@ -18,18 +18,6 @@ serverSock_chat.listen()
 clientSocks_game = []
 clientSocks_chat = []
 players = []
-global_leadboard = []
-
-
-
-def calculateHighScores(leadboard):
-    scores={}
-    for player in players:
-        scores[player.name]=player.score
-    print(scores)
-    leadboard = sorted(scores.items(), key = lambda x:x[1], reverse = True)
-    print(leadboard)
-    return leadboard
 
 # broadcast a message to all players
 def broadcast(message):
@@ -39,34 +27,28 @@ def broadcast(message):
 # thread for updating database
 def updateDB():
     for player in players:
-        player.updateScore()
-        player.updateLocation()
+        player.updateData()
     threading.Timer(3, updateDB).start()
 
-        
-
 # thread for each player
-def sendClientScene(clientSock_game, clientSock_chat, player, global_leadboard):
+def sendClientScene(clientSock_game, clientSock_chat, player):
     while True:
         try:
-
-            #Generate Leadboard according to players scores
-            global_leadboard=calculateHighScores(global_leadboard)
-            senderables=[players,player.score,global_leadboard]
-            
             # receive current player location
-            receivables = pickle.loads(clientSock_game.recv(4096))
-            player.location = receivables[0]
-            player.score = receivables[1]
-            player.enemyLocation = receivables[2]
+            my_player = pickle.loads(clientSock_game.recv(4096))
+            player.crash = my_player.crash
+            if not player.crash:
+                player.location = my_player.location
+                player.score = my_player.score
+                player.enemyLocation = my_player.enemyLocation
+                player.bg_y = my_player.bg_y
             # send all players
-            clientSock_game.send(pickle.dumps(senderables))
+            clientSock_game.send(pickle.dumps(players))
 
             # receive a message from the player
             message = clientSock_chat.recv(4096).decode()
             # broadcast the message to all players
             broadcast(message)
-            
 
         except:
             break
@@ -85,7 +67,6 @@ if __name__ == '__main__':
         print('listening to connections...')
         clientSock_game, (IP, PORT) = serverSock_game.accept()
         clientSock_chat, (IP, PORT) = serverSock_chat.accept()
-
         print('connection established')
 
         # get the player nickname
@@ -97,15 +78,11 @@ if __name__ == '__main__':
         clientSocks_chat.append(clientSock_chat)
 
         # create the player
-        player = Player(
-            nickname,       # player name
-            [0,0],          # player relative location
-            0,              # player score
-            [0,3000]        # enemy relative location
-        )
+        player = Player(nickname)
         players.append(player)
         clientSock_game.send(pickle.dumps(player))
 
         # form a new thread for the client
-        playerThread = threading.Thread(target=sendClientScene, args=(clientSock_game, clientSock_chat, player,global_leadboard,))
+        playerThread = threading.Thread(target=sendClientScene,
+                    args=(clientSock_game, clientSock_chat, player,))
         playerThread.start()

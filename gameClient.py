@@ -7,8 +7,6 @@ from tkinter import simpledialog
 import tkinter.scrolledtext
 import queue
 import random
-from time import sleep
-
 
 # serverIP = '20.199.99.151'
 serverIP = '127.0.0.1'
@@ -46,24 +44,21 @@ carImg = pygame.image.load(car)
 enemyImg = pygame.image.load(enemy)
 
 # background variables
-bg_y1 = 0
-bg_y2 = -screenHeight
 bg_speed = 2
 limit1 = 15
 limit2 = bgImg.get_width()-carImg.get_width()-15
 
 # player car variables
-location = my_player.location
 car_bottom_offset = 20
 car_speed = 1
 
 # enemy car variables
-enemyLocation = my_player.enemyLocation
 enemy_car_speed = 1
 
 # score variables
-count = my_player.score
 white = (255, 255, 255)
+gray = (170, 170, 170)
+red = (255, 50, 50)
 black = (0, 0, 0)
 
 # queues
@@ -80,16 +75,16 @@ def showCar(bg_x, location_x, location_y, name):
         car_x = bg_x + limit2
     gameDisplay.blit(carImg, (car_x, car_y))
 
-    font3 = pygame.font.SysFont("arial", 17)
-    text3 = font3.render(name, True, white)
+    font = pygame.font.SysFont("arial", 17)
+    text = font.render(name, True, white)
     name_x = car_x + carImg.get_width()/2
     name_y = car_y + carImg.get_height() + 10
-    text_rect = text3.get_rect(center=(name_x, name_y))
-    gameDisplay.blit(text3, text_rect)
+    text_rect = text.get_rect(center=(name_x, name_y))
+    gameDisplay.blit(text, text_rect)
 
     return car_x, car_y
 
-# shows the enemy car
+#shows the enemy car
 def showEnemyCar(bg_x, random_x, enemy_y):
     if enemy_y >= screenHeight:
         enemy_y = -bgImg.get_height()
@@ -103,8 +98,8 @@ def showEnemyCar(bg_x, random_x, enemy_y):
 def showMovingRoad(bg_y1, bg_y2, playersCnt, idx):
     bg_x = (screenWidth/2) - playersCnt*(bgImg.get_width()/2) + idx*(bgImg.get_width())
     gameDisplay.blit(bgImg, (bg_x, bg_y1))
-    bg_y1 += bg_speed
     gameDisplay.blit(bgImg, (bg_x, bg_y2))
+    bg_y1 += bg_speed
     bg_y2 += bg_speed
     if bg_y1 >= screenHeight:
         bg_y1 = -bgImg.get_height()
@@ -112,7 +107,7 @@ def showMovingRoad(bg_y1, bg_y2, playersCnt, idx):
         bg_y2 = -bgImg.get_height()
     return bg_x, bg_y1, bg_y2
 
-# function to detect collision between player and enemy
+# detect collision between player and enemy
 def detectCollision(car_x, car_y, enemy_x, enemy_y):
     if car_x > enemy_x and car_x < enemy_x+enemyImg.get_width():
         if car_y > enemy_y and car_y < enemy_y+enemyImg.get_height():
@@ -141,24 +136,63 @@ def displayScore(count):
     font = pygame.font.SysFont("comicsansms", 20)
     text = font.render("Score : " + str(int(count/100)*100), True, white)
     gameDisplay.blit(text, (0, 0))
-    return count
 
-def displayLeadboard(leadboard, color):
-    y_coordinate=40
+# display the game over text
+def displayGameOver(bg_x):
+    font = pygame.font.SysFont("comicsansms", 40, True)
+    text = font.render("Game Over", True, white)
+    text_x = bg_x + bgImg.get_width()/2
+    text_y = screenHeight/2
+    text_rect = text.get_rect(center=(text_x, text_y))
+    gameDisplay.blit(text, text_rect)
+
+# display the try again button
+def tryAgain(bg_x):
+    button_width = 180
+    button_height = 45
+    button_x = bg_x + bgImg.get_width()/2 - button_width/2
+    button_y = screenHeight/2 + 40
+    button = pygame.Rect(
+        button_x,
+        button_y,
+        button_width,
+        button_height
+    )
+    pygame.draw.rect(gameDisplay, gray, button, border_radius=15)
+
+
+    text_x = button_x + button_width/2
+    text_y = button_y + button_height/2
+    font = pygame.font.SysFont('comicsansms', 30, bold=True)
+    text = font.render('Try Again', True, red)
+    text_rect = text.get_rect(center=(text_x, text_y))
+    gameDisplay.blit(text, text_rect)
+
+    for event in pygame.event.get():
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if button.collidepoint(event.pos):
+                return True
+    return False
+    
+
+# make a dictionary of all player scores
+def calculateScores(players):
+    scores = dict()
+    for player in players:
+        scores[player.name] = int(player.score/100)*100
+    leaderboard = sorted(scores.items(), key = lambda x:x[1], reverse = True)
+    return leaderboard
+
+# display the score leaderboard
+def displayLeaderboard(leadboard, color):
+    y_coordinate = 40
     font = pygame.font.SysFont("comicsansms", 20)
     text1 = font.render("Leadboard: ", True, white)
     gameDisplay.blit(text1, (0, y_coordinate))
     for name in leadboard:
-        y_coordinate+=25
+        y_coordinate += 25
         text2 = font.render(str(name), True, color)
         gameDisplay.blit(text2, (0, y_coordinate))
-
-def display_message(msg):
-        font = pygame.font.SysFont("comicsansms", 72, True)
-        text = font.render(msg, True, (255, 255, 255))
-        gameDisplay.blit(text, (600 - text.get_width() // 2, 240 - text.get_height() // 2))
-        pygame.display.update()
-        sleep(1)
 
 # GUI thread
 def gui():
@@ -185,7 +219,6 @@ def gui():
         chatMessage = f"{nickname}:{input_area.get('1.0','end')}"
         messageQueue.put(chatMessage)
         input_area.delete('1.0','end')
-
     def stop():
         win.quit()
         clientSock_chat.close()
@@ -204,10 +237,7 @@ guiThread.start()
 
 # Game and Chat main thread
 run = True
-crash = False
-iteration=False
 while run:
-    
     # if the user exits the game
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -223,35 +253,18 @@ while run:
     # if the user presses arrow keys
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
-        location[0] -= car_speed
+        my_player.location[0] -= car_speed
     if keys[pygame.K_RIGHT]:
-        location[0] += car_speed
-    
+        my_player.location[0] += car_speed
+    if keys[pygame.K_UP]:
+        my_player.location[1] -= car_speed
+    if keys[pygame.K_DOWN]:
+        my_player.location[1] += car_speed
 
-    # send the current player location and score
-    clientSock_game.send(pickle.dumps([
-        location,
-        int(count/100)*100,
-        enemyLocation
-    ]))
-
-    
-
-    # receive all players locations
-    receivables = pickle.loads(clientSock_game.recv(4096))
-    players=receivables[0]
-    leadboard=receivables[2]
-    #print(leadboard)
-
-    # if first iteration, receive client's last attempt -score- 
-    if not iteration:
-        count=receivables[1]
-        my_idx=len(players)-1
-        name= players[my_idx].name
-        iteration=True
-    else:
-        displayLeadboard(leadboard, black)
-        
+    # send the current player location
+    clientSock_game.send(pickle.dumps(my_player))
+    # receive all players
+    players = pickle.loads(clientSock_game.recv(4096))
     # get chat message
     if not messageQueue.empty():
         chatMessage = messageQueue.get()
@@ -266,12 +279,16 @@ while run:
         textAreaQueue.put(text_area)
         updateTextArea(text_area, broadcastMessage)
 
-
     gameDisplay.fill(list(black))
+
+    # display the leaderboard
+    leaderboard = calculateScores(players)
+    displayLeaderboard(leaderboard, white)
+
     for i in range(len(players)):
         # draw the background street for each player
         bg_x, bg_y1, bg_y2 = showMovingRoad(
-            bg_y1, bg_y2, len(players), i
+            players[i].bg_y[0], players[i].bg_y[1], len(players), i
         )
         # draw enemy car
         enemyLocation = showEnemyCar(
@@ -283,24 +300,29 @@ while run:
             bg_x, players[i].location[0], players[i].location[1], players[i].name
         )
 
-        # Saving the values of the current client
-        if name == players[i].name:
-            my_enemy_x= absolute_enemy_x
-            my_enemy_y= enemyLocation[1]
-            my_car_x=car_x
-            my_car_y=car_y
+        # display gameover
+        if players[i].crash:
+            displayGameOver(bg_x)
 
-    # detect collisions for current client only
-    if detectCollision(my_car_x, my_car_y, my_enemy_x, my_enemy_y):
-        display_message("Game Over")
-        count=0
-        crash = True
-        
-    #Displaying score
-    if not crash:
-        displayLeadboard(leadboard, white)
-        count = displayScore(count)
-        count += 1
+        # display score
+        if nickname == players[i].name:
+            my_player.location = players[i].location
+            my_player.bg_y = [bg_y1, bg_y2]
+            my_player.enemyLocation = enemyLocation
+            
+            displayScore(players[i].score)
+            my_player.score += 1
+
+            # detect collisions
+            if detectCollision(car_x, car_y, absolute_enemy_x, enemyLocation[1]):
+                my_player.crash = True
+
+            if players[i].crash:
+                if tryAgain(bg_x):
+                    my_player.crash = False
+                    my_player.location = [0,0]
+                    my_player.enemyLocation = [0,3000]
+                    my_player.score = 0
         
     # redraw the scene
     pygame.display.update()

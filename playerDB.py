@@ -63,39 +63,21 @@ def isPlayerInDB(name):
 
 
 class Player():
-    def __init__(self, name, location, score, enemyLocation):
+    def __init__(self, name):
+        self.name = name
+        self.enemyLocation = [0,3000]
+        self.bg_y = [0,-600]
+
         if isPlayerInDB(name):
-            self.name = name
             playerData = self.getPlayerData()
             self.location = playerData['location']
             self.score = playerData['score']
-            self.enemyLocation = enemyLocation
-        
+            self.crash = playerData['crash']
         else:
-            self.name = name
-            self.location = location
-            self.score = score
-            self.enemyLocation = enemyLocation
-            try:
-                database1.child('Players').child(self.name).set({
-                    'name': self.name,
-                    'location': self.location,
-                    'score':self.score
-                })
-                database2.child('Players').child(self.name).set({
-                    'name': self.name,
-                    'location': self.location,
-                    'score':self.score
-                })
-            except:
-                try:
-                    database2.child('Players').child(self.name).set({
-                        'name': self.name,
-                        'location': self.location,
-                        'score':self.score
-                    })
-                except:
-                    pass
+            self.location = [0,0]
+            self.score = 0
+            self.crash = False
+            self.updateData()
 
     def getPlayerData(self):
         try:
@@ -114,36 +96,24 @@ class Player():
             except:
                 pass
 
-    def updateLocation(self):
+    def updateData(self):
         try:
             database1.child('Players').child(self.name).update({
-                'location': self.location
+                'location': self.location,
+                'score': self.score,
+                'crash': self.crash
             })
             database2.child('Players').child(self.name).update({
-                'location': self.location
+                'location': self.location,
+                'score': self.score,
+                'crash': self.crash
             })
         except:
             try:
                 database2.child('Players').child(self.name).update({
-                    'location': self.location
+                    'location': self.location,
+                    'score': self.score,
+                    'crash': self.crash
                 })
             except:
                 pass
-
-    def updateScore(self):
-        try:
-            database1.child('Players').child(self.name).update({
-                'score': self.score
-            })
-            database2.child('Players').child(self.name).update({
-                'score': self.score
-            })
-        except:
-            try:
-                database2.child('Players').child(self.name).update({
-                    'score': self.score
-                })
-            except:
-                pass
-
-
