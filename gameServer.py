@@ -5,7 +5,7 @@ from playerDB import *
 
 # bind to address and listen to connections
 IP = ''
-PORT = 20000
+PORT = 50000
 serverSock_game = socket(AF_INET, SOCK_STREAM)
 serverSock_game.bind((IP, PORT))
 serverSock_game.listen()

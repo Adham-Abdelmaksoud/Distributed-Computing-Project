@@ -8,9 +8,19 @@ import tkinter.scrolledtext
 import queue
 import random
 
-# serverIP = '20.199.99.151'
-serverIP = '127.0.0.1'
-serverPort = 20000
+isServerLocal = True
+if isServerLocal:
+    serverIP = '127.0.0.1'
+    bg_speed = 2
+    car_speed = 1
+    enemy_car_speed = 1
+else:
+    serverIP = '20.199.99.151'
+    bg_speed = 12
+    car_speed = 10
+    enemy_car_speed = 17
+
+serverPort = 50000
 
 # connect to server for game
 clientSock_game = socket(AF_INET, SOCK_STREAM)
@@ -43,19 +53,10 @@ bgImg = pygame.image.load(background)
 carImg = pygame.image.load(car)
 enemyImg = pygame.image.load(enemy)
 
-# background variables
-bg_speed = 2
-limit1 = 15
-limit2 = bgImg.get_width()-carImg.get_width()-15
-
 # player car variables
 car_bottom_offset = 20
-car_speed = 1
 
-# enemy car variables
-enemy_car_speed = 1
-
-# score variables
+# colors
 white = (255, 255, 255)
 gray = (170, 170, 170)
 red = (255, 50, 50)
@@ -67,14 +68,12 @@ textAreaQueue = queue.Queue()
 
 # shows the car for a given road
 def showCar(bg_x, location_x, location_y, name):
+    # show the car
     car_x = bg_x + bgImg.get_width()/2 - carImg.get_width()/2 + location_x
     car_y = bgImg.get_height() - carImg.get_height() - car_bottom_offset + location_y
-    if car_x < bg_x + limit1:
-        car_x = bg_x + limit1
-    if car_x > bg_x + limit2:
-        car_x = bg_x + limit2
     gameDisplay.blit(carImg, (car_x, car_y))
 
+    # show the player name
     font = pygame.font.SysFont("arial", 17)
     text = font.render(name, True, white)
     name_x = car_x + carImg.get_width()/2
@@ -84,11 +83,11 @@ def showCar(bg_x, location_x, location_y, name):
 
     return car_x, car_y
 
-#shows the enemy car
+# shows the enemy car
 def showEnemyCar(bg_x, random_x, enemy_y):
     if enemy_y >= screenHeight:
         enemy_y = -bgImg.get_height()
-        random_x = random.randrange(limit1, limit2)
+        random_x = random.randrange(15, bgImg.get_width()-carImg.get_width()-15)
     enemy_x = bg_x + random_x
     gameDisplay.blit(enemyImg, (enemy_x, enemy_y))
     enemy_y += enemy_car_speed
@@ -126,7 +125,7 @@ def detectCollision(car_x, car_y, enemy_x, enemy_y):
 def updateTextArea(text_area, message):
     if message != ' ':
         text_area.config(state = 'normal')
-        #viewing broadcasted message
+        # viewing broadcasted message
         text_area.insert('end',message)
         text_area.yview('end')
         text_area.config(state='disabled')
@@ -134,7 +133,8 @@ def updateTextArea(text_area, message):
 # view the score
 def displayScore(count):
     font = pygame.font.SysFont("comicsansms", 20)
-    text = font.render("Score : " + str(int(count/100)*100), True, white)
+    # text = font.render("Score : " + str(int(count/100)*100), True, white)
+    text = font.render("Score : " + str(count), True, white)
     gameDisplay.blit(text, (0, 0))
 
 # display the game over text
@@ -147,7 +147,7 @@ def displayGameOver(bg_x):
     gameDisplay.blit(text, text_rect)
 
 # display the try again button
-def tryAgain(bg_x):
+def displayTryAgain(bg_x):
     button_width = 180
     button_height = 45
     button_x = bg_x + bgImg.get_width()/2 - button_width/2
@@ -160,7 +160,6 @@ def tryAgain(bg_x):
     )
     pygame.draw.rect(gameDisplay, gray, button, border_radius=15)
 
-
     text_x = button_x + button_width/2
     text_y = button_y + button_height/2
     font = pygame.font.SysFont('comicsansms', 30, bold=True)
@@ -168,18 +167,14 @@ def tryAgain(bg_x):
     text_rect = text.get_rect(center=(text_x, text_y))
     gameDisplay.blit(text, text_rect)
 
-    for event in pygame.event.get():
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if button.collidepoint(event.pos):
-                return True
-    return False
-    
+    return button    
 
 # make a dictionary of all player scores
 def calculateScores(players):
     scores = dict()
     for player in players:
-        scores[player.name] = int(player.score/100)*100
+        # scores[player.name] = int(player.score/100)*100
+        scores[player.name] = player.score
     leaderboard = sorted(scores.items(), key = lambda x:x[1], reverse = True)
     return leaderboard
 
@@ -216,11 +211,12 @@ def gui():
     input_area.pack(padx=20, pady=5)
 
     def write():
-        chatMessage = f"{nickname}:{input_area.get('1.0','end')}"
+        chatMessage = f"{nickname}: {input_area.get('1.0','end')}"
         messageQueue.put(chatMessage)
         input_area.delete('1.0','end')
     def stop():
         win.quit()
+        clientSock_game.close()
         clientSock_chat.close()
         exit(0)
 
@@ -232,24 +228,12 @@ def gui():
     win.mainloop()
 
 # make GUI thread
-guiThread = threading.Thread(target=gui)
+guiThread = threading.Thread(target=gui, daemon=True)
 guiThread.start()
 
 # Game and Chat main thread
 run = True
-while run:
-    # if the user exits the game
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-    if not run:
-        print('Player Logged Out!!')
-        pygame.display.quit()
-        pygame.quit()
-        clientSock_game.close()
-        clientSock_chat.close()
-        break
-    
+while run:    
     # if the user presses arrow keys
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
@@ -261,24 +245,39 @@ while run:
     if keys[pygame.K_DOWN]:
         my_player.location[1] += car_speed
 
-    # send the current player location
-    clientSock_game.send(pickle.dumps(my_player))
-    # receive all players
-    players = pickle.loads(clientSock_game.recv(4096))
-    # get chat message
-    if not messageQueue.empty():
-        chatMessage = messageQueue.get()
-    else:
-        chatMessage = ' '
-    clientSock_chat.send(chatMessage.encode())
-    broadcastMessage = clientSock_chat.recv(4096).decode()
-    broadcastMessage = broadcastMessage.strip()
-    broadcastMessage += '\n'
-    if broadcastMessage != ' ' and broadcastMessage != '\n':
-        text_area = textAreaQueue.get()
-        textAreaQueue.put(text_area)
-        updateTextArea(text_area, broadcastMessage)
+    # limit my player's movement
+    if my_player.location[0] < -bgImg.get_width()/2 + carImg.get_width()/2 + 15:
+        my_player.location[0] = -bgImg.get_width()/2 + carImg.get_width()/2 + 15
+    if my_player.location[0] > bgImg.get_width()/2 - carImg.get_width()/2 - 15:
+        my_player.location[0] = bgImg.get_width()/2 - carImg.get_width()/2 - 15
+    if my_player.location[1] < -bgImg.get_height() + carImg.get_height() + car_bottom_offset:
+        my_player.location[1] = -bgImg.get_height() + carImg.get_height() + car_bottom_offset
+    if my_player.location[1] > 0:
+        my_player.location[1] = 0
 
+    try:
+        # send the current player location
+        clientSock_game.send(pickle.dumps(my_player))
+        # receive all players
+        players = pickle.loads(clientSock_game.recv(4096))
+        # send a chat message
+        if not messageQueue.empty():
+            chatMessage = messageQueue.get()
+        else:
+            chatMessage = ' '
+        clientSock_chat.send(chatMessage.encode())
+        # receive the broadcasted message and display it
+        broadcastMessage = clientSock_chat.recv(4096).decode()
+        broadcastMessage = broadcastMessage.strip()
+        broadcastMessage += '\n'
+        if broadcastMessage != ' ' and broadcastMessage != '\n':
+            text_area = textAreaQueue.get()
+            textAreaQueue.put(text_area)
+            updateTextArea(text_area, broadcastMessage)
+    except:
+        break
+
+    # clear the screen
     gameDisplay.fill(list(black))
 
     # display the leaderboard
@@ -313,16 +312,34 @@ while run:
             displayScore(players[i].score)
             my_player.score += 1
 
-            # detect collisions
+            # check if my player collided with the enemy
             if detectCollision(car_x, car_y, absolute_enemy_x, enemyLocation[1]):
                 my_player.crash = True
 
+            # display try again button
             if players[i].crash:
-                if tryAgain(bg_x):
+                global tryAgainBtn
+                tryAgainBtn = displayTryAgain(bg_x)
+
+    for event in pygame.event.get():
+        # check if my player exitted the game screen
+        if event.type == pygame.QUIT:
+            run = False
+        # check if my player clicked on try again button
+        if my_player.crash == True:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if tryAgainBtn.collidepoint(event.pos):
                     my_player.crash = False
                     my_player.location = [0,0]
                     my_player.enemyLocation = [0,3000]
                     my_player.score = 0
-        
+
     # redraw the scene
     pygame.display.update()
+
+# if the player exitted the game
+print('Player Logged Out!!')
+pygame.display.quit()
+pygame.quit()
+clientSock_game.close()
+clientSock_chat.close()
