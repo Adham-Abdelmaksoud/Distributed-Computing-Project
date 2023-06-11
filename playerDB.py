@@ -132,10 +132,12 @@ class Player():
             self.location = playerData['location']
             self.score = playerData['score']
             self.crash = playerData['crash']
+            self.highscore = playerData['highscore']
         else:
             self.location = [0,0]
             self.score = 0
             self.crash = False
+            self.highscore = 0
             self.updateData()
 
     def getPlayerData(self):
@@ -171,13 +173,15 @@ class Player():
             database1.child('Players').child(self.name).update({
                 'location': self.location,
                 'score': self.score,
-                'crash': self.crash
+                'crash': self.crash,
+                'highscore': self.highscore
             })
             database1.update({'LastModified': time.time()})
             database2.child('Players').child(self.name).update({
                 'location': self.location,
                 'score': self.score,
-                'crash': self.crash
+                'crash': self.crash,
+                'highscore': self.highscore
             })
             database2.update({'LastModified': time.time()})
         except:
@@ -185,7 +189,8 @@ class Player():
                 database2.child('Players').child(self.name).update({
                     'location': self.location,
                     'score': self.score,
-                    'crash': self.crash
+                    'crash': self.crash,
+                    'highscore': self.highscore
                 })
                 database2.update({'LastModified': time.time()})
             except:

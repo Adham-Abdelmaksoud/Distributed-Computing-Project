@@ -58,12 +58,14 @@ enemyImg = pygame.image.load(enemy)
 
 # player car variables
 car_bottom_offset = 20
+newHighscore = False
 
 # colors
 white = (255, 255, 255)
 gray = (170, 170, 170)
 red = (255, 50, 50)
 black = (0, 0, 0)
+green = (30, 255, 30)
 
 # queues
 messageQueue = queue.Queue()
@@ -134,11 +136,14 @@ def updateTextArea(text_area, message):
         text_area.config(state='disabled')
 
 # view the score
-def displayScore(count):
+def displayScore(count, highscore):
     font = pygame.font.SysFont("comicsansms", 20)
     # text = font.render("Score : " + str(int(count/100)*100), True, white)
-    text = font.render("Score : " + str(count), True, white)
-    gameDisplay.blit(text, (0, 0))
+    text_score = font.render("Score : " + str(count), True, white)
+    gameDisplay.blit(text_score, (0, 0))
+
+    text_highscore = font.render("Highscore : " + str(highscore), True, white)
+    gameDisplay.blit(text_highscore, (0, 40))
 
 # display the game over text
 def displayGameOver(bg_x):
@@ -146,6 +151,15 @@ def displayGameOver(bg_x):
     text = font.render("Game Over", True, white)
     text_x = bg_x + bgImg.get_width()/2
     text_y = screenHeight/2
+    text_rect = text.get_rect(center=(text_x, text_y))
+    gameDisplay.blit(text, text_rect)
+
+# display the game over text
+def displayNewHighscore(bg_x):
+    font = pygame.font.SysFont("comicsansms", 33, True)
+    text = font.render("New Highscore!!!", True, green)
+    text_x = bg_x + bgImg.get_width()/2
+    text_y = screenHeight/2 - 50
     text_rect = text.get_rect(center=(text_x, text_y))
     gameDisplay.blit(text, text_rect)
 
@@ -183,7 +197,7 @@ def calculateScores(players):
 
 # display the score leaderboard
 def displayLeaderboard(leadboard, color):
-    y_coordinate = 40
+    y_coordinate = 80
     font = pygame.font.SysFont("comicsansms", 20)
     text1 = font.render("Leadboard: ", True, white)
     gameDisplay.blit(text1, (0, y_coordinate))
@@ -322,7 +336,7 @@ while run:
             my_player.bg_y = [bg_y1, bg_y2]
             my_player.enemyLocation = enemyLocation
             
-            displayScore(players[i].score)
+            displayScore(players[i].score, players[i].highscore)
             my_player.score += 1
 
             # check if my player collided with the enemy
@@ -333,6 +347,13 @@ while run:
             if players[i].crash:
                 global tryAgainBtn
                 tryAgainBtn = displayTryAgain(bg_x)
+
+                if my_player.highscore < players[i].score:
+                    newHighscore = True
+                    my_player.highscore = players[i].score
+
+                if newHighscore:
+                    displayNewHighscore(bg_x)
 
     for event in pygame.event.get():
         # check if my player exitted the game screen
@@ -346,6 +367,8 @@ while run:
                     my_player.location = [0,0]
                     my_player.enemyLocation = [0,3000]
                     my_player.score = 0
+
+                    newHighscore = False
 
     # redraw the scene
     pygame.display.update()

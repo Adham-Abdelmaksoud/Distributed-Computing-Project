@@ -43,6 +43,7 @@ def sendClientScene(clientSock_game, clientSock_chat, player):
             # receive current player location
             my_player = pickle.loads(clientSock_game.recv(4096))
             player.crash = my_player.crash
+            player.highscore = my_player.highscore
             if not player.crash:
                 player.location = my_player.location
                 player.score = my_player.score
