@@ -29,6 +29,9 @@ clientSock_game.connect((serverIP, serverPort))
 clientSock_chat = socket(AF_INET, SOCK_STREAM)
 clientSock_chat.connect((serverIP, serverPort+20))
 
+# get all previous chat messages
+index, messageList = pickle.loads(clientSock_chat.recv(4096))
+
 # get the nickname from the player
 msg = tkinter.Tk()
 msg.withdraw()
@@ -209,6 +212,16 @@ def gui():
 
     input_area = tkinter.Text(win, height = 3)
     input_area.pack(padx=20, pady=5)
+
+    if index+1 >= len(messageList):
+        for message in messageList:
+            updateTextArea(text_area, message)
+    else:
+        i = index+1
+        while i != index:
+            updateTextArea(text_area, messageList[i])
+            i = (i + 1) % 15
+        updateTextArea(text_area, messageList[index])
 
     def write():
         chatMessage = f"{nickname}: {input_area.get('1.0','end')}"

@@ -19,6 +19,8 @@ clientSocks_game = []
 clientSocks_chat = []
 players = []
 
+playerLock = threading.Lock()
+
 # broadcast a message to all players
 def broadcast(message):
     for clientSock in clientSocks_chat:
@@ -26,8 +28,12 @@ def broadcast(message):
 
 # thread for updating database
 def updateDB():
+    playerLock.acquire()
     for player in players:
         player.updateData()
+    playerLock.release()
+    
+    synchronizeDBs()
     threading.Timer(3, updateDB).start()
 
 # thread for each player
@@ -47,6 +53,8 @@ def sendClientScene(clientSock_game, clientSock_chat, player):
 
             # receive a message from the player
             message = clientSock_chat.recv(4096).decode()
+            if message != ' ':
+                addNewMessage(message)
             # broadcast the message to all players
             broadcast(message)
 
@@ -57,8 +65,10 @@ def sendClientScene(clientSock_game, clientSock_chat, player):
     clientSock_chat.close()
     clientSocks_game.remove(clientSock_game)
     clientSocks_chat.remove(clientSock_chat)
-    players.remove(player)
 
+    playerLock.acquire()
+    players.remove(player)
+    playerLock.release()
 
 if __name__ == '__main__':
     updateDB()
@@ -68,6 +78,12 @@ if __name__ == '__main__':
         clientSock_game, (IP, PORT) = serverSock_game.accept()
         clientSock_chat, (IP, PORT) = serverSock_chat.accept()
         print('connection established')
+
+        # get the message list from the database and send it to player
+        index, messageList = getAllMessages()
+        if messageList == None:
+            messageList = []
+        clientSock_chat.send(pickle.dumps([index, messageList]))
 
         # get the player nickname
         nickname = clientSock_chat.recv(1024).decode()

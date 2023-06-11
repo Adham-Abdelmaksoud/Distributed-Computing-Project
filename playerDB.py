@@ -1,5 +1,5 @@
-
 import pyrebase
+import time
 
 config1 = {
     'apiKey': "AIzaSyBke2h_fJ5foz1WJaEKtdfeLWeYDfZa92I",
@@ -27,39 +27,98 @@ database1 = firebase1.database()
 database2 = firebase2.database()
 
 
-def getAllPlayersData():
+def getAllMessages():
     try:
-        players = database1.child('Players').get()
+        index1 = database1.child('Messages').child('index').get().val()
+        messageList1 = database1.child('Messages').child('messageList').get().val()
+        lastModified1 = database1.child('LastModified').get().val()
     except:
-        players = database2.child('Players').get()
-    return dict(players.val())
+        index1 = database2.child('Messages').child('index').get().val()
+        messageList1 = database2.child('Messages').child('messageList').get().val()
+        lastModified1 = database2.child('LastModified').get().val()
 
-def isDBEmpty():
     try:
-        players = database1.child('Players').shallow().get().val()
+        index2 = database2.child('Messages').child('index').get().val()
+        messageList2 = database2.child('Messages').child('messageList').get().val()
+        lastModified2 = database2.child('LastModified').get().val()
     except:
-        players = database2.child('Players').shallow().get().val()
-    if players == None:
-        return True
-    return False
+        index2 = database1.child('Messages').child('index').get().val()
+        messageList2 = database1.child('Messages').child('messageList').get().val()
+        lastModified2 = database2.child('LastModified').get().val()
 
-def deleteAllPLayers():
+    if lastModified1 == None:
+        return index2, messageList2
+    if lastModified2 == None:
+        return index1, messageList1
+    
+    if lastModified1 >= lastModified2:
+        return index1, messageList1
+    else:
+        return index2, messageList2
+
+
+def addNewMessage(message):
+    index, messageList = getAllMessages()
+
+    if index == None:
+        index = -1
+    if messageList == None:
+        messageList = []
+
+    index = (index + 1) % 15
+    if index >= len(messageList):
+        messageList.append(message)
+    else:
+        messageList[index] = message
+
     try:
-        database1.child('Players').remove()
-        database2.child('Players').remove()
+        database1.child('Messages').update({'index': index})
+        database1.child('Messages').update({'messageList': messageList})
+        database2.child('Messages').update({'index': index})
+        database2.child('Messages').update({'messageList': messageList})
     except:
         try:
-            database2.child('Players').remove()
+            database2.child('Messages').update({'index': index})
+            database2.child('Messages').update({'messageList': messageList})
         except:
             pass
 
-def isPlayerInDB(name):
-    if isDBEmpty():
-        return False
-    players = getAllPlayersData()
-    if name in players.keys():
-        return True
-    return False
+
+def synchronizeDBs():
+    try:
+        players1 = database1.child('Players').get().val()
+        messages1 = database1.child('Messages').get().val()
+        lastModified1 = database1.child('LastModified').get().val()
+    except:
+        return
+    try:
+        players2 = database2.child('Players').get().val()
+        messages2 = database2.child('Messages').get().val()
+        lastModified2 = database2.child('LastModified').get().val()
+    except:
+        return
+    
+    if lastModified1 == None and lastModified2 == None:
+        return
+    if lastModified1 == None:
+        lastModified1 = 0
+    if lastModified2 == None:
+        lastModified2 = 0
+
+    if lastModified1 >= lastModified2:
+        if players1 == None:
+            return
+        database2.update({'Players': players1})
+        if messages1 != None:
+            database2.update({'Messages': messages1})
+        database2.update({'LastModified': lastModified1})
+    else:
+        if players2 == None:
+            return
+        database1.update({'Players': players2})
+        if messages2 != None:
+            database1.update({'Messages': messages2})
+        database1.update({'LastModified': lastModified2})
 
 
 class Player():
@@ -68,8 +127,8 @@ class Player():
         self.enemyLocation = [0,3000]
         self.bg_y = [0,-600]
 
-        if isPlayerInDB(name):
-            playerData = self.getPlayerData()
+        playerData = self.getPlayerData()
+        if playerData != None:
             self.location = playerData['location']
             self.score = playerData['score']
             self.crash = playerData['crash']
@@ -81,20 +140,31 @@ class Player():
 
     def getPlayerData(self):
         try:
-            player = database1.child('Players').child(self.name).get()
+            player1 = database1.child('Players').child(self.name).get().val()
+            lastModified1 = database1.child('LastModified').get().val()
         except:
-            player = database2.child('Players').child(self.name).get()
-        return dict(player.val())
-
-    def deletePlayer(self):
+            player1 = database2.child('Players').child(self.name).get().val()
+            lastModified1 = database2.child('LastModified').get().val()
         try:
-            database1.child('Players').child(self.name).remove()
-            database2.child('Players').child(self.name).remove()
+            player2 = database2.child('Players').child(self.name).get().val()
+            lastModified2 = database2.child('LastModified').get().val()
         except:
-            try:
-                database2.child('Players').child(self.name).remove()
-            except:
-                pass
+            player2 = database1.child('Players').child(self.name).get().val()
+            lastModified2 = database1.child('LastModified').get().val()
+
+        if lastModified1 == None:
+            lastModified1 = 0
+        if lastModified2 == None:
+            lastModified2 = 0
+
+        if lastModified1 >= lastModified2:
+            if player1 == None:
+                return None
+            return dict(player1)
+        else:
+            if player2 == None:
+                return None
+            return dict(player2)
 
     def updateData(self):
         try:
@@ -103,11 +173,13 @@ class Player():
                 'score': self.score,
                 'crash': self.crash
             })
+            database1.update({'LastModified': time.time()})
             database2.child('Players').child(self.name).update({
                 'location': self.location,
                 'score': self.score,
                 'crash': self.crash
             })
+            database2.update({'LastModified': time.time()})
         except:
             try:
                 database2.child('Players').child(self.name).update({
@@ -115,5 +187,16 @@ class Player():
                     'score': self.score,
                     'crash': self.crash
                 })
+                database2.update({'LastModified': time.time()})
             except:
                 pass
+
+    # def deletePlayer(self):
+    #     try:
+    #         database1.child('Players').child(self.name).remove()
+    #         database2.child('Players').child(self.name).remove()
+    #     except:
+    #         try:
+    #             database2.child('Players').child(self.name).remove()
+    #         except:
+    #             pass
