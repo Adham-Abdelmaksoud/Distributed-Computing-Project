@@ -12,13 +12,13 @@ isServerLocal = True
 if isServerLocal:
     serverIP = '127.0.0.1'
     bg_speed = 2
-    car_speed = 1
-    enemy_car_speed = 1
+    car_speed = 3
+    #enemy_car_speed = 1
 else:
     serverIP = '20.199.99.151'
     bg_speed = 12
     car_speed = 10
-    enemy_car_speed = 17
+    #enemy_car_speed = 17
 
 serverPort = 50000
 
@@ -93,9 +93,10 @@ def showEnemyCar(bg_x, random_x, enemy_y):
     if enemy_y >= screenHeight:
         enemy_y = -bgImg.get_height()
         random_x = random.randrange(15, bgImg.get_width()-carImg.get_width()-15)
+        my_player.enemySpeed += 1  
     enemy_x = bg_x + random_x
     gameDisplay.blit(enemyImg, (enemy_x, enemy_y))
-    enemy_y += enemy_car_speed
+    enemy_y += my_player.enemySpeed
     return random_x, enemy_y
 
 # shows the road of a given player index
@@ -367,6 +368,7 @@ while run:
                     my_player.location = [0,0]
                     my_player.enemyLocation = [0,3000]
                     my_player.score = 0
+                    my_player.enemySpeed = 1
 
                     newHighscore = False
 
