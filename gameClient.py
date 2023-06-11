@@ -7,18 +7,21 @@ from tkinter import simpledialog
 import tkinter.scrolledtext
 import queue
 import random
+from playerDB import *
 
-isServerLocal = True
+isServerLocal = False
 if isServerLocal:
     serverIP = '127.0.0.1'
-    bg_speed = 2
-    car_speed = 3
-    #enemy_car_speed = 1
+    bg_speed = 3
+    car_speed = 2
+    enemy_speed_init = 2
+    enemy_speed_step = 0.25
 else:
     serverIP = '20.199.99.151'
-    bg_speed = 12
-    car_speed = 10
-    #enemy_car_speed = 17
+    bg_speed = 20
+    car_speed = 20
+    enemy_speed_init = 15
+    enemy_speed_step = 1.5
 
 serverPort = 50000
 
@@ -40,6 +43,8 @@ clientSock_chat.send(nickname.encode())
 
 # get the player data
 my_player = pickle.loads(clientSock_game.recv(4096))
+if my_player.enemySpeed == 0:
+    my_player.enemySpeed = enemy_speed_init
 
 # initialize pygame and form window
 pygame.init()
@@ -91,9 +96,9 @@ def showCar(bg_x, location_x, location_y, name):
 # shows the enemy car
 def showEnemyCar(bg_x, random_x, enemy_y):
     if enemy_y >= screenHeight:
-        enemy_y = -bgImg.get_height()
+        enemy_y = -enemyImg.get_height() - 30
         random_x = random.randrange(15, bgImg.get_width()-carImg.get_width()-15)
-        my_player.enemySpeed += 1  
+        my_player.enemySpeed += enemy_speed_step
     enemy_x = bg_x + random_x
     gameDisplay.blit(enemyImg, (enemy_x, enemy_y))
     enemy_y += my_player.enemySpeed
@@ -228,15 +233,16 @@ def gui():
     input_area = tkinter.Text(win, height = 3)
     input_area.pack(padx=20, pady=5)
 
-    if index+1 >= len(messageList):
-        for message in messageList:
-            updateTextArea(text_area, message)
-    else:
-        i = index+1
-        while i != index:
-            updateTextArea(text_area, messageList[i])
-            i = (i + 1) % 15
-        updateTextArea(text_area, messageList[index])
+    if index != None and messageList != None:
+        if index+1 >= len(messageList):
+            for message in messageList:
+                updateTextArea(text_area, message)
+        else:
+            i = index+1
+            while i != index:
+                updateTextArea(text_area, messageList[i])
+                i = (i + 1) % 100
+            updateTextArea(text_area, messageList[index])
 
     def write():
         chatMessage = f"{nickname}: {input_area.get('1.0','end')}"
@@ -368,7 +374,7 @@ while run:
                     my_player.location = [0,0]
                     my_player.enemyLocation = [0,3000]
                     my_player.score = 0
-                    my_player.enemySpeed = 1
+                    my_player.enemySpeed = enemy_speed_init
 
                     newHighscore = False
 

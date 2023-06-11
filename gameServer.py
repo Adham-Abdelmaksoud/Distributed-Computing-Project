@@ -49,12 +49,15 @@ def sendClientScene(clientSock_game, clientSock_chat, player):
                 player.score = my_player.score
                 player.enemyLocation = my_player.enemyLocation
                 player.bg_y = my_player.bg_y
+                player.enemySpeed = my_player.enemySpeed
             # send all players
             clientSock_game.send(pickle.dumps(players))
 
             # receive a message from the player
             message = clientSock_chat.recv(4096).decode()
-            if message != ' ':
+            message = message.strip()
+            message += '\n'
+            if message != ' ' and message != '\n':
                 addNewMessage(message)
             # broadcast the message to all players
             broadcast(message)
@@ -80,26 +83,32 @@ if __name__ == '__main__':
         clientSock_chat, (IP, PORT) = serverSock_chat.accept()
         print('connection established')
 
-        # get the message list from the database and send it to player
-        index, messageList = getAllMessages()
-        if messageList == None:
-            messageList = []
-        clientSock_chat.send(pickle.dumps([index, messageList]))
-
-        # get the player nickname
-        nickname = clientSock_chat.recv(1024).decode()
-        print(f'{nickname} joined the game')
-
         # add client to lists
         clientSocks_game.append(clientSock_game)
         clientSocks_chat.append(clientSock_chat)
 
-        # create the player
-        player = Player(nickname)
-        players.append(player)
-        clientSock_game.send(pickle.dumps(player))
+        try:
+            # get the message list from the database and send it to player
+            index, messageList = getAllMessages()
+            if messageList == None:
+                messageList = []
+            clientSock_chat.send(pickle.dumps([index, messageList]))
 
-        # form a new thread for the client
-        playerThread = threading.Thread(target=sendClientScene,
-                    args=(clientSock_game, clientSock_chat, player,))
-        playerThread.start()
+            # get the player nickname
+            nickname = clientSock_chat.recv(1024).decode()
+            print(f'{nickname} joined the game')
+
+            # create the player
+            player = Player(nickname)
+            players.append(player)
+            clientSock_game.send(pickle.dumps(player))
+
+            # form a new thread for the client
+            playerThread = threading.Thread(target=sendClientScene,
+                        args=(clientSock_game, clientSock_chat, player,))
+            playerThread.start()
+        except:
+            clientSock_game.close()
+            clientSock_chat.close()
+            clientSocks_game.remove(clientSock_game)
+            clientSocks_chat.remove(clientSock_chat)

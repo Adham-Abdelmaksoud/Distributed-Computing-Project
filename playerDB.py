@@ -65,7 +65,7 @@ def addNewMessage(message):
     if messageList == None:
         messageList = []
 
-    index = (index + 1) % 15
+    index = (index + 1) % 100
     if index >= len(messageList):
         messageList.append(message)
     else:
@@ -139,7 +139,7 @@ class Player():
             self.score = 0
             self.crash = False
             self.highscore = 0
-            self.enemySpeed = 1
+            self.enemySpeed = 0
             self.updateData()
 
     def getPlayerData(self):
