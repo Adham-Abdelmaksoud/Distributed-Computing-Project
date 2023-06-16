@@ -29,17 +29,21 @@ def broadcast(message):
 # thread for updating database
 def updateDB():
     playerLock.acquire()
-    for player in players:
-        player.updateData()
+    for room in players:
+        for player in room:
+            player.updateData()
     playerLock.release()
     
     synchronizeDBs()
     threading.Timer(3, updateDB).start()
 
 # thread for each player
-def sendClientScene(clientSock_game, clientSock_chat, player):
+def sendClientScene(clientSock_game, clientSock_chat, player, room):
     while True:
         try:
+            clientSock_game.settimeout(10)
+            clientSock_chat.settimeout(10)
+
             # receive current player location
             my_player = pickle.loads(clientSock_game.recv(4096))
             player.crash = my_player.crash
@@ -51,7 +55,7 @@ def sendClientScene(clientSock_game, clientSock_chat, player):
                 player.bg_y = my_player.bg_y
                 player.enemySpeed = my_player.enemySpeed
             # send all players
-            clientSock_game.send(pickle.dumps(players))
+            clientSock_game.send(pickle.dumps(players[room]))
 
             # receive a message from the player
             message = clientSock_chat.recv(4096).decode()
@@ -64,35 +68,36 @@ def sendClientScene(clientSock_game, clientSock_chat, player):
 
         except:
             break
-    # remove client from lists if player exits game 
+    # remove client from lists if player exits game
     clientSock_game.close()
     clientSock_chat.close()
     clientSocks_game.remove(clientSock_game)
     clientSocks_chat.remove(clientSock_chat)
 
     playerLock.acquire()
-    players.remove(player)
+    players[room].remove(player)
     playerLock.release()
 
 if __name__ == '__main__':
     updateDB()
     while True:
-        # wait for a connection
-        print('listening to connections...')
-        clientSock_game, (IP, PORT) = serverSock_game.accept()
-        clientSock_chat, (IP, PORT) = serverSock_chat.accept()
-        print('connection established')
-
-        # add client to lists
-        clientSocks_game.append(clientSock_game)
-        clientSocks_chat.append(clientSock_chat)
+        try:
+            # wait for a connection
+            print('listening to connections...')
+            clientSock_game, (IP, PORT) = serverSock_game.accept()
+            clientSock_chat, (IP, PORT) = serverSock_chat.accept()
+            print('connection established')
+        except KeyboardInterrupt:
+            serverSock_game.close()
+            serverSock_chat.close()
+            break
 
         try:
             # get the message list from the database and send it to player
-            index, messageList = getAllMessages()
+            msgIndex, messageList = getAllMessages()
             if messageList == None:
                 messageList = []
-            clientSock_chat.send(pickle.dumps([index, messageList]))
+            clientSock_chat.send(pickle.dumps([msgIndex, messageList]))
 
             # get the player nickname
             nickname = clientSock_chat.recv(1024).decode()
@@ -100,15 +105,30 @@ if __name__ == '__main__':
 
             # create the player
             player = Player(nickname)
-            players.append(player)
+            room = -1
+            if len(players) == 0:
+                players.append([player])
+                room = 0
+            else:
+                for i in range(len(players)):
+                    if len(players[i]) < 3:
+                        players[i].append(player)
+                        room = i
+                        break
+                    if i == len(players)-1:
+                        players.append([player])
+                        room = i+1
+
             clientSock_game.send(pickle.dumps(player))
 
+            # add client to lists
+            clientSocks_game.append(clientSock_game)
+            clientSocks_chat.append(clientSock_chat)
+
             # form a new thread for the client
-            playerThread = threading.Thread(target=sendClientScene,
-                        args=(clientSock_game, clientSock_chat, player,))
+            playerThread = threading.Thread(target=sendClientScene, daemon=True,
+                        args=(clientSock_game, clientSock_chat, player, room,))
             playerThread.start()
         except:
             clientSock_game.close()
             clientSock_chat.close()
-            clientSocks_game.remove(clientSock_game)
-            clientSocks_chat.remove(clientSock_chat)

@@ -7,7 +7,6 @@ from tkinter import simpledialog
 import tkinter.scrolledtext
 import queue
 import random
-from playerDB import *
 
 isServerLocal = False
 if isServerLocal:
