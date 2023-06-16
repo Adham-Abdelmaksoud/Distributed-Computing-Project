@@ -21,6 +21,9 @@ players = []
 
 playerLock = threading.Lock()
 
+def getPlayersNicknames():
+    pass
+
 # broadcast a message to all players
 def broadcast(message):
     for clientSock in clientSocks_chat:
@@ -87,7 +90,7 @@ if __name__ == '__main__':
             clientSock_game, (IP, PORT) = serverSock_game.accept()
             clientSock_chat, (IP, PORT) = serverSock_chat.accept()
             print('connection established')
-        except KeyboardInterrupt:
+        except:
             serverSock_game.close()
             serverSock_chat.close()
             break

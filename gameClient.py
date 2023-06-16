@@ -3,10 +3,11 @@ import pygame
 import pickle
 import threading
 import tkinter
-from tkinter import simpledialog
+from tkinter import simpledialog, messagebox
 import tkinter.scrolledtext
 import queue
 import random
+import sys
 
 isServerLocal = False
 if isServerLocal:
@@ -37,7 +38,23 @@ index, messageList = pickle.loads(clientSock_chat.recv(4096))
 # get the nickname from the player
 msg = tkinter.Tk()
 msg.withdraw()
-nickname = simpledialog.askstring("Nickname", "Please choose a nickname", parent=msg)
+while True:
+    nickname = simpledialog.askstring("Nickname",
+        "   \tPlease choose a nickname\t    ", parent=msg)
+    
+    # if player closed the nickname window
+    if nickname == None:
+        clientSock_game.close()
+        clientSock_chat.close()
+        sys.exit(0)
+    
+    # if player pressed on OK without entering a nickname
+    if nickname == '':
+        messagebox.showwarning('Empty String', 'A nickname must be entered!!')
+        continue
+    else:
+        break
+
 clientSock_chat.send(nickname.encode())
 
 # get the player data
@@ -55,7 +72,7 @@ pygame.display.set_caption('Racing Multiplayer Game')
 # load background images
 background = 'img/back_ground1.jpg'
 car = 'img/car.png'
-enemy = 'img/enemy_car_1.png' 
+enemy = 'img/enemy_car_1.png'
 bgImg = pygame.image.load(background)
 carImg = pygame.image.load(car)
 enemyImg = pygame.image.load(enemy)
