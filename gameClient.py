@@ -33,7 +33,7 @@ clientSock_chat = socket(AF_INET, SOCK_STREAM)
 clientSock_chat.connect((serverIP, serverPort+20))
 
 # get all previous chat messages
-index, messageList = pickle.loads(clientSock_chat.recv(4096))
+index, messageList, nicknames = pickle.loads(clientSock_chat.recv(4096))
 
 # get the nickname from the player
 msg = tkinter.Tk()
@@ -51,6 +51,9 @@ while True:
     # if player pressed on OK without entering a nickname
     if nickname == '':
         messagebox.showwarning('Empty String', 'A nickname must be entered!!')
+        continue
+    elif nickname in nicknames:
+        messagebox.showwarning('Used Nickname', 'This nickname is already used!!')
         continue
     else:
         break

@@ -22,7 +22,13 @@ players = []
 playerLock = threading.Lock()
 
 def getPlayersNicknames():
-    pass
+    nicknames = []
+    playerLock.acquire()
+    for room in players:
+        for player in room:
+            nicknames.append(player.name)
+    playerLock.release()
+    return nicknames
 
 # broadcast a message to all players
 def broadcast(message):
@@ -100,7 +106,10 @@ if __name__ == '__main__':
             msgIndex, messageList = getAllMessages()
             if messageList == None:
                 messageList = []
-            clientSock_chat.send(pickle.dumps([msgIndex, messageList]))
+
+            nicknames = getPlayersNicknames()
+
+            clientSock_chat.send(pickle.dumps([msgIndex, messageList, nicknames]))
 
             # get the player nickname
             nickname = clientSock_chat.recv(1024).decode()
