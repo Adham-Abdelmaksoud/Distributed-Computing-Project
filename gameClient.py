@@ -113,11 +113,12 @@ def showCar(bg_x, location_x, location_y, name):
     return car_x, car_y
 
 # shows the enemy car
-def showEnemyCar(bg_x, random_x, enemy_y):
+def showEnemyCar(bg_x, random_x, enemy_y, name):
     if enemy_y >= screenHeight:
         enemy_y = -enemyImg.get_height() - 30
         random_x = random.randrange(15, bgImg.get_width()-carImg.get_width()-15)
-        my_player.enemySpeed += enemy_speed_step
+        if name == my_player.name:
+            my_player.enemySpeed += enemy_speed_step
     enemy_x = bg_x + random_x
     gameDisplay.blit(enemyImg, (enemy_x, enemy_y))
     enemy_y += my_player.enemySpeed
@@ -344,7 +345,7 @@ while run:
         )
         # draw enemy car
         enemyLocation = showEnemyCar(
-            bg_x, players[i].enemyLocation[0], players[i].enemyLocation[1]
+            bg_x, players[i].enemyLocation[0], players[i].enemyLocation[1], players[i].name
         )
         absolute_enemy_x = bg_x + enemyLocation[0]
         # draw each player car
