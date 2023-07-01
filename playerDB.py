@@ -44,7 +44,7 @@ def getAllMessages():
     except:
         index2 = database1.child('Messages').child('index').get().val()
         messageList2 = database1.child('Messages').child('messageList').get().val()
-        lastModified2 = database2.child('LastModified').get().val()
+        lastModified2 = database1.child('LastModified').get().val()
 
     if lastModified1 == None:
         return index2, messageList2
@@ -128,6 +128,7 @@ class Player():
         self.bg_y = [0,-600]
 
         playerData = self.getPlayerData()
+            
         if playerData != None:
             self.location = playerData['location']
             self.score = playerData['score']

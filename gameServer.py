@@ -2,15 +2,18 @@ from socket import *
 import threading
 import pickle
 from playerDB import *
+from datetime import datetime
 
 # bind to address and listen to connections
 IP = ''
 PORT = 50000
 serverSock_game = socket(AF_INET, SOCK_STREAM)
+serverSock_game.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 serverSock_game.bind((IP, PORT))
 serverSock_game.listen()
 
 serverSock_chat = socket(AF_INET, SOCK_STREAM)
+serverSock_chat.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 serverSock_chat.bind((IP, PORT+20))
 serverSock_chat.listen()
 
@@ -74,9 +77,9 @@ def sendClientScene(clientSock_game, clientSock_chat, player, room):
                 addNewMessage(message)
             # broadcast the message to all players
             broadcast(message)
-
         except:
             break
+
     # remove client from lists if player exits game
     clientSock_game.close()
     clientSock_chat.close()
@@ -87,32 +90,38 @@ def sendClientScene(clientSock_game, clientSock_chat, player, room):
     players[room].remove(player)
     playerLock.release()
 
+print(f'Server started at {datetime.now()}')
+
 if __name__ == '__main__':
     updateDB()
+    serverSock_game.settimeout(900)
+    serverSock_chat.settimeout(900)
     while True:
         try:
             # wait for a connection
-            print('listening to connections...')
+            print('\nlistening to connections...')
             clientSock_game, (IP, PORT) = serverSock_game.accept()
             clientSock_chat, (IP, PORT) = serverSock_chat.accept()
             print('connection established')
-        except:
-            serverSock_game.close()
-            serverSock_chat.close()
+        except KeyboardInterrupt:
             break
+        except:
+            continue
+
+        # get the message list from the database and send it to player
+        msgIndex, messageList = getAllMessages()
+        if messageList == None:
+            messageList = []
+
+        nicknames = getPlayersNicknames()
 
         try:
-            # get the message list from the database and send it to player
-            msgIndex, messageList = getAllMessages()
-            if messageList == None:
-                messageList = []
-
-            nicknames = getPlayersNicknames()
-
             clientSock_chat.send(pickle.dumps([msgIndex, messageList, nicknames]))
 
             # get the player nickname
             nickname = clientSock_chat.recv(1024).decode()
+            if nickname == '':
+                raise Exception
             print(f'{nickname} joined the game')
 
             # create the player
@@ -132,15 +141,21 @@ if __name__ == '__main__':
                         room = i+1
 
             clientSock_game.send(pickle.dumps(player))
-
-            # add client to lists
-            clientSocks_game.append(clientSock_game)
-            clientSocks_chat.append(clientSock_chat)
-
-            # form a new thread for the client
-            playerThread = threading.Thread(target=sendClientScene, daemon=True,
-                        args=(clientSock_game, clientSock_chat, player, room,))
-            playerThread.start()
         except:
             clientSock_game.close()
             clientSock_chat.close()
+            continue
+
+        # add client to lists
+        clientSocks_game.append(clientSock_game)
+        clientSocks_chat.append(clientSock_chat)
+
+        # form a new thread for the client
+        playerThread = threading.Thread(target=sendClientScene, daemon=True,
+                    args=(clientSock_game, clientSock_chat, player, room,))
+        playerThread.start()
+        print('thread created')
+
+print(f'\nServer closed at {datetime.now()}')
+serverSock_game.close()
+serverSock_chat.close()

@@ -61,7 +61,7 @@ while True:
 clientSock_chat.send(nickname.encode())
 
 # get the player data
-my_player = pickle.loads(clientSock_game.recv(4096))
+my_player = pickle.loads(clientSock_game.recv(8192))
 if my_player.enemySpeed == 0:
     my_player.enemySpeed = enemy_speed_init
 
