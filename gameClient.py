@@ -23,7 +23,7 @@ else:
     enemy_speed_init = 15
     enemy_speed_step = 1.5
 
-serverPort = 50000
+serverPort = 20000
 
 # connect to server for game
 clientSock_game = socket(AF_INET, SOCK_STREAM)
@@ -61,7 +61,7 @@ while True:
 clientSock_chat.send(nickname.encode())
 
 # get the player data
-my_player = pickle.loads(clientSock_game.recv(8192))
+my_player = pickle.loads(clientSock_game.recv(4096))
 if my_player.enemySpeed == 0:
     my_player.enemySpeed = enemy_speed_init
 
